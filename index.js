@@ -29,12 +29,12 @@ if (localStorage.getItem("wzzdy_xgluatip") != "0.1") {
 if (localStorage.getItem("wzzdy_freetip") != "0.2") {
     mdui.dialog({
         headline: "提示",
-        description: "本网页完全免费且开源 如果你是购买得到的 你可能被骗了",
+        description: "本网页完全免费且开源",
         actions: [
             {
-                text: "复制开源链接",
+                text: "复制QQ群号",
                 onClick: () => {
-                    复制文本("https://gitee.com/huajicloud/wzzdy")
+                    复制文本("656577630")
                     return true;
                 },
             },
