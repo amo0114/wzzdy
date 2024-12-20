@@ -1,9 +1,5 @@
 #!/bin/bash
-# 检查环境变量并直接调用相应的函数
-if [ -n "$VLESS_PORT" ] && [ -n "$HY2_PORT" ] && [ -n "$TUIC_PORT" ]; then
-    install_singbox
-    exit 0
-fi
+
 # 定义颜色
 re="\033[0m"
 red="\033[1;91m"
@@ -24,78 +20,78 @@ export UUID=${UUID:-'bc97f674-c578-4940-9234-0a1da46041b9'}
 ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 
 install_singbox() {
-echo -e "${yellow}本脚本同时三协议共存${purple}(vless-reality|hysteria2|tuic)${re}"
-echo -e "${yellow}开始运行前，请确保在面板${purple}已开放3个端口，一个tcp端口和两个udp端口${re}"
-echo -e "${yellow}面板${purple}Additional services中的Run your own applications${yellow}已开启为${purplw}Enabled${yellow}状态${re}"
+    echo -e "${yellow}本脚本同时三协议共存${purple}(vless-reality|hysteria2|tuic)${re}"
+    echo -e "${yellow}开始运行前，请确保在面板${purple}已开放3个端口，一个tcp端口和两个udp端口${re}"
+    echo -e "${yellow}面板${purple}Additional services中的Run your own applications${yellow}已开启为${purplw}Enabled${yellow}状态${re}"
 
-cd $WORKDIR
+    cd $WORKDIR
 
-ARCH=$(uname -m) && DOWNLOAD_DIR="." && mkdir -p "$DOWNLOAD_DIR" && FILE_INFO=()
-if [ "$ARCH" == "arm" ] || [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
-    FILE_INFO=("https://github.com/eooce/test/releases/download/arm64/sb web" "https://github.com/eooce/test/releases/download/ARM/swith npm")
-elif [ "$ARCH" == "amd64" ] || [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "x86" ]; then
-    FILE_INFO=("https://github.com/eooce/test/releases/download/freebsd/sb web" "https://github.com/eooce/test/releases/download/freebsd/npm npm")
-else
-    echo "Unsupported architecture: $ARCH"
-    exit 1
-fi
+    ARCH=$(uname -m) && DOWNLOAD_DIR="." && mkdir -p "$DOWNLOAD_DIR" && FILE_INFO=()
+    if [ "$ARCH" == "arm" ] || [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
+        FILE_INFO=("https://github.com/eooce/test/releases/download/arm64/sb web" "https://github.com/eooce/test/releases/download/ARM/swith npm")
+    elif [ "$ARCH" == "amd64" ] || [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "x86" ]; then
+        FILE_INFO=("https://github.com/eooce/test/releases/download/freebsd/sb web" "https://github.com/eooce/test/releases/download/freebsd/npm npm")
+    else
+        echo "Unsupported architecture: $ARCH"
+        exit 1
+    fi
 
-declare -A FILE_MAP
-generate_random_name() {
-    local chars=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890
-    local name=""
-    for i in {1..6}; do
-        name="$name${chars:RANDOM%${#chars}:1}"
+    declare -A FILE_MAP
+    generate_random_name() {
+        local chars=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890
+        local name=""
+        for i in {1..6}; do
+            name="$name${chars:RANDOM%${#chars}:1}"
+        done
+        echo "$name"
+    }
+
+    download_with_fallback() {
+        local URL=$1
+        local NEW_FILENAME=$2
+
+        curl -L -sS --max-time 2 -o "$NEW_FILENAME" "$URL" &
+        CURL_PID=$!
+        CURL_START_SIZE=$(stat -c%s "$NEW_FILENAME" 2>/dev/null || echo 0)
+        
+        sleep 1
+        CURL_CURRENT_SIZE=$(stat -c%s "$NEW_FILENAME" 2>/dev/null || echo 0)
+        
+        if [ "$CURL_CURRENT_SIZE" -le "$CURL_START_SIZE" ]; then
+            kill $CURL_PID 2>/dev/null
+            wait $CURL_PID 2>/dev/null
+            wget -q -O "$NEW_FILENAME" "$URL"
+            echo -e "\e[1;32mDownloading $NEW_FILENAME by wget\e[0m"
+        else
+            wait $CURL_PID
+            echo -e "\e[1;32mDownloading $NEW_FILENAME by curl\e[0m"
+        fi
+    }
+
+    for entry in "${FILE_INFO[@]}"; do
+        URL=$(echo "$entry" | cut -d ' ' -f 1)
+        RANDOM_NAME=$(generate_random_name)
+        NEW_FILENAME="$DOWNLOAD_DIR/$RANDOM_NAME"
+        
+        if [ -e "$NEW_FILENAME" ]; then
+            echo -e "\e[1;32m$NEW_FILENAME already exists, Skipping download\e[0m"
+        else
+            download_with_fallback "$URL" "$NEW_FILENAME"
+        fi
+        
+        chmod +x "$NEW_FILENAME"
+        FILE_MAP[$(echo "$entry" | cut -d ' ' -f 2)]="$NEW_FILENAME"
     done
-    echo "$name"
-}
+    wait
 
-download_with_fallback() {
-    local URL=$1
-    local NEW_FILENAME=$2
+    output=$(./"$(basename ${FILE_MAP[web]})" generate reality-keypair)
+    private_key=$(echo "${output}" | awk '/PrivateKey:/ {print $2}')
+    public_key=$(echo "${output}" | awk '/PublicKey:/ {print $2}')
 
-    curl -L -sS --max-time 2 -o "$NEW_FILENAME" "$URL" &
-    CURL_PID=$!
-    CURL_START_SIZE=$(stat -c%s "$NEW_FILENAME" 2>/dev/null || echo 0)
-    
-    sleep 1
-    CURL_CURRENT_SIZE=$(stat -c%s "$NEW_FILENAME" 2>/dev/null || echo 0)
-    
-    if [ "$CURL_CURRENT_SIZE" -le "$CURL_START_SIZE" ]; then
-        kill $CURL_PID 2>/dev/null
-        wait $CURL_PID 2>/dev/null
-        wget -q -O "$NEW_FILENAME" "$URL"
-        echo -e "\e[1;32mDownloading $NEW_FILENAME by wget\e[0m"
-    else
-        wait $CURL_PID
-        echo -e "\e[1;32mDownloading $NEW_FILENAME by curl\e[0m"
-    fi
-}
+    openssl ecparam -genkey -name prime256v1 -out "private.key"
+    openssl req -new -x509 -days 3650 -key "private.key" -out "cert.pem" -subj "/CN=$USERNAME.serv00.net"
 
-for entry in "${FILE_INFO[@]}"; do
-    URL=$(echo "$entry" | cut -d ' ' -f 1)
-    RANDOM_NAME=$(generate_random_name)
-    NEW_FILENAME="$DOWNLOAD_DIR/$RANDOM_NAME"
-    
-    if [ -e "$NEW_FILENAME" ]; then
-        echo -e "\e[1;32m$NEW_FILENAME already exists, Skipping download\e[0m"
-    else
-        download_with_fallback "$URL" "$NEW_FILENAME"
-    fi
-    
-    chmod +x "$NEW_FILENAME"
-    FILE_MAP[$(echo "$entry" | cut -d ' ' -f 2)]="$NEW_FILENAME"
-done
-wait
-
-output=$(./"$(basename ${FILE_MAP[web]})" generate reality-keypair)
-private_key=$(echo "${output}" | awk '/PrivateKey:/ {print $2}')
-public_key=$(echo "${output}" | awk '/PublicKey:/ {print $2}')
-
-openssl ecparam -genkey -name prime256v1 -out "private.key"
-openssl req -new -x509 -days 3650 -key "private.key" -out "cert.pem" -subj "/CN=$USERNAME.serv00.net"
-
-  cat > config.json << EOF
+    cat > config.json << EOF
 {
   "log": {
     "disabled": true,
@@ -302,16 +298,20 @@ openssl req -new -x509 -days 3650 -key "private.key" -out "cert.pem" -subj "/CN=
 }
 EOF
 
-if [ -e "$(basename ${FILE_MAP[web]})" ]; then
-    nohup ./"$(basename ${FILE_MAP[web]})" run -c config.json >/dev/null 2>&1 &
-    sleep 2
-    pgrep -x "$(basename ${FILE_MAP[web]})" > /dev/null && green "$(basename ${FILE_MAP[web]}) is running" || { red "$(basename ${FILE_MAP[web]}) is not running, restarting..."; pkill -x "$(basename ${FILE_MAP[web]})"; nohup ./"$(basename ${FILE_MAP[web]})" run -c config.json >/dev/null 2>&1 & }
-fi
-sleep 1
-rm -f "$(basename ${FILE_MAP[web]})"
+    if [ -e "$(basename ${FILE_MAP[web]})" ]; then
+        nohup ./"$(basename ${FILE_MAP[web]})" run -c config.json >/dev/null 2>&1 &
+        sleep 2
+        pgrep -x "$(basename ${FILE_MAP[web]})" > /dev/null && green "$(basename ${FILE_MAP[web]}) is running" || { red "$(basename ${FILE_MAP[web]}) is not running, restarting..."; pkill -x "$(basename ${FILE_MAP[web]})"; nohup ./"$(basename ${FILE_MAP[web]})" run -c config.json >/dev/null 2>&1 & }
+    fi
+    sleep 1
+    rm -f "$(basename ${FILE_MAP[web]})"
 }
 
-install_singbox
+# 检查环境变量并直接调用相应的函数
+if [ -n "$VLESS_PORT" ] && [ -n "$HY2_PORT" ] && [ -n "$TUIC_PORT" ]; then
+    install_singbox
+    exit 0
+fi
 
 get_ip() {
   ip=$(curl -s --max-time 1.5 ipv4.ip.sb)
