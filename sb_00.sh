@@ -307,12 +307,6 @@ EOF
     rm -f "$(basename ${FILE_MAP[web]})"
 }
 
-# 检查环境变量并直接调用相应的函数
-if [ -n "$VLESS_PORT" ] && [ -n "$HY2_PORT" ] && [ -n "$TUIC_PORT" ]; then
-    install_singbox
-    exit 0
-fi
-
 get_ip() {
   ip=$(curl -s --max-time 1.5 ipv4.ip.sb)
   if [ -z "$ip" ]; then
@@ -355,5 +349,11 @@ purple "Running done!\n"
 sleep 3 
 rm -rf config.json sb.log core fake_useragent_0.2.0.json
 }
+
+# 检查环境变量并直接调用相应的函数
+if [ -n "$VLESS_PORT" ] && [ -n "$HY2_PORT" ] && [ -n "$TUIC_PORT" ]; then
+    install_singbox
+    exit 0
+fi
 
 get_links
