@@ -14,14 +14,10 @@ red() { echo -e "\e[1;91m$1\033[0m"; }
 green() { echo -e "\e[1;32m$1\033[0m"; }
 yellow() { echo -e "\e[1;33m$1\033[0m"; }
 purple() { echo -e "\e[1;35m$1\033[0m"; }
-reading() { read -p "$(red "$1")" "$2"; }
 
 USERNAME=$(whoami)
 HOSTNAME=$(hostname)
 export UUID=${UUID:-'bc97f674-c578-4940-9234-0a1da46041b9'}
-export NEZHA_SERVER=${NEZHA_SERVER:-''}
-export NEZHA_PORT=${NEZHA_PORT:-'5555'}     
-export NEZHA_KEY=${NEZHA_KEY:-''}
 
 [[ "$HOSTNAME" == "s1.ct8.pl" ]] && WORKDIR="domains/${USERNAME}.ct8.pl/logs" || WORKDIR="domains/${USERNAME}.serv00.net/logs"
 [ -d "$WORKDIR" ] || (mkdir -p "$WORKDIR" && chmod 777 "$WORKDIR")
@@ -31,11 +27,6 @@ install_singbox() {
 echo -e "${yellow}本脚本同时三协议共存${purple}(vless-reality|hysteria2|tuic)${re}"
 echo -e "${yellow}开始运行前，请确保在面板${purple}已开放3个端口，一个tcp端口和两个udp端口${re}"
 echo -e "${yellow}面板${purple}Additional services中的Run your own applications${yellow}已开启为${purplw}Enabled${yellow}状态${re}"
-
-if [ -z "$NEZHA_SERVER" ] || [ -z "$NEZHA_KEY" ]; then
-    echo "NEZHA_SERVER and NEZHA_KEY must be set"
-    exit 1
-fi
 
 cd $WORKDIR
 
@@ -311,30 +302,13 @@ openssl req -new -x509 -days 3650 -key "private.key" -out "cert.pem" -subj "/CN=
 }
 EOF
 
-if [ -e "$(basename ${FILE_MAP[npm]})" ]; then
-    tlsPorts=("443" "8443" "2096" "2087" "2083" "2053")
-    if [[ "${tlsPorts[*]}" =~ "${NEZHA_PORT}" ]]; then
-      NEZHA_TLS="--tls"
-    else
-      NEZHA_TLS=""
-    fi
-    if [ -n "$NEZHA_SERVER" ] && [ -n "$NEZHA_PORT" ] && [ -n "$NEZHA_KEY" ]; then
-        export TMPDIR=$(pwd)
-        nohup ./"$(basename ${FILE_MAP[npm]})" -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} ${NEZHA_TLS} >/dev/null 2>&1 &
-        sleep 2
-        pgrep -x "$(basename ${FILE_MAP[npm]})" > /dev/null && green "$(basename ${FILE_MAP[npm]}) is running" || { red "$(basename ${FILE_MAP[npm]}) is not running, restarting..."; pkill -x "$(basena[...]
-    else
-        purple "NEZHA variable is empty, skipping running"
-    fi
-fi
-
 if [ -e "$(basename ${FILE_MAP[web]})" ]; then
     nohup ./"$(basename ${FILE_MAP[web]})" run -c config.json >/dev/null 2>&1 &
     sleep 2
-    pgrep -x "$(basename ${FILE_MAP[web]})" > /dev/null && green "$(basename ${FILE_MAP[web]}) is running" || { red "$(basename ${FILE_MAP[web]}) is not running, restarting..."; pkill -x "$(basename $[...]
+    pgrep -x "$(basename ${FILE_MAP[web]})" > /dev/null && green "$(basename ${FILE_MAP[web]}) is running" || { red "$(basename ${FILE_MAP[web]}) is not running, restarting..."; pkill -x "$(basename ${FILE_MAP[web]})"; nohup ./"$(basename ${FILE_MAP[web]})" run -c config.json >/dev/null 2>&1 & }
 fi
 sleep 1
-rm -f "$(basename ${FILE_MAP[npm]})" "$(basename ${FILE_MAP[web]})"
+rm -f "$(basename ${FILE_MAP[web]})"
 }
 
 install_singbox
@@ -380,7 +354,6 @@ purple "\n$WORKDIR/list.txt saved successfully"
 purple "Running done!\n"
 sleep 3 
 rm -rf config.json sb.log core fake_useragent_0.2.0.json
-
 }
 
 get_links
