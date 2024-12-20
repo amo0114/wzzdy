@@ -1,5 +1,9 @@
 #!/bin/bash
-
+# 检查环境变量并直接调用相应的函数
+if [ -n "$VLESS_PORT" ] && [ -n "$HY2_PORT" ] && [ -n "$TUIC_PORT" ]; then
+    install_singbox
+    exit 0
+fi
 # 定义颜色
 re="\033[0m"
 red="\033[1;91m"
@@ -478,7 +482,7 @@ rm -rf config.json sb.log core fake_useragent_0.2.0.json
 
 }
 
-#主菜单
+# 主菜单
 menu() {
    clear
    echo ""
@@ -504,7 +508,7 @@ menu() {
         2) uninstall_singbox ;; 
         3) cat $WORKDIR/list.txt ;; 
         4) kill_all_tasks ;;
-	0) exit 0 ;;
+    0) exit 0 ;;
         *) red "无效的选项，请输入 0 到 4" ;;
     esac
 }
