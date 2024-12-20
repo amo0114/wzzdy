@@ -346,14 +346,11 @@ EOF
 cat list.txt
 purple "\n$WORKDIR/list.txt saved successfully"
 purple "Running done!\n"
-sleep 3 
-rm -rf config.json sb.log core fake_useragent_0.2.0.json
 }
 
 # 检查环境变量并直接调用相应的函数
 if [ -n "$VLESS_PORT" ] && [ -n "$HY2_PORT" ] && [ -n "$TUIC_PORT" ]; then
     install_singbox
+    get_links
     exit 0
 fi
-
-get_links
