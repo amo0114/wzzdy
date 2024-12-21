@@ -1,0 +1,30 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    # 服务器名
+    server_name _;  # 代表所有请求
+
+    # 根目录
+    root /var/www/html;
+
+    # 默认主页
+    index index.html;
+
+    # 访问网站时的请求处理
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # 错误页面配置
+    error_page 404 /404.html;
+    location = /404.html {
+        root /usr/share/nginx/html;
+    }
+
+    # 自定义 50x 错误页面
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}
