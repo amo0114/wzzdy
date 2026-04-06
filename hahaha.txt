@@ -1,1 +1,1 @@
-curl -L https://raw.githubusercontent.com/nezhahq/scripts/main/agent/install.sh -o agent.sh && chmod +x agent.sh && env NZ_SERVER=nezha.040115.xyz:443 NZ_TLS=true NZ_CLIENT_SECRET=qs4fEaLg5geBf6Mv0Piisp8y245wklxl ./agent.sh
+哈哈哈哈
