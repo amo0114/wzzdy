@@ -1,1 +1,1 @@
-hhjh
+wget -qO- https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/install.sh | sudo bash -s -- -e https://k.uuwu.de -t ZNQkTLcH2QBGPpTjnPOboT
